@@ -24,9 +24,9 @@ fn main() {
 fn unzip_file(file: File, directory: &Path) {
     let mut archive = zip::ZipArchive::new(file).unwrap();
 
-    let files_index = 0..archive.len();
+    let files_indexes = 0..archive.len();
 
-    files_index
+    files_indexes
         .map(|file_index| unzip_archive(file_index, &mut archive, directory))
         .for_each(drop);
 }
