@@ -1,21 +1,27 @@
 #[macro_use]
 extern crate clap;
 
+use clap::App;
+use std::{fs, fs::File, io, path::Path};
+
 fn main() {
     let yaml = load_yaml!("../cli_def/en_us.yml");
-    let matches = clap::App::from_yaml(yaml).get_matches();
+    let matches = App::from_yaml(yaml).get_matches();
 
     let file = matches
         .value_of("files")
         .expect("You need to provide a valid path to a compressed file.");
 
-    let fname = std::path::Path::new(&file);
-    let file = std::fs::File::open(&fname).unwrap();
+    let destination = matches.value_of("extract_directory").unwrap_or("./");
 
-    unzip_file(file, std::path::Path::new(""));
+    let file_name = Path::new(&file);
+    let destination_name = Path::new(&destination);
+    let file = File::open(&file_name).unwrap();
+
+    unzip_file(file, destination_name);
 }
 
-fn unzip_file(file: std::fs::File, directory: &std::path::Path) {
+fn unzip_file(file: File, directory: &Path) {
     let mut archive = zip::ZipArchive::new(file).unwrap();
 
     let files_index = 0..archive.len();
@@ -25,11 +31,7 @@ fn unzip_file(file: std::fs::File, directory: &std::path::Path) {
         .for_each(drop);
 }
 
-fn unzip_archive(
-    file_index: usize,
-    archive: &mut zip::ZipArchive<std::fs::File>,
-    directory: &std::path::Path,
-) {
+fn unzip_archive(file_index: usize, archive: &mut zip::ZipArchive<File>, directory: &Path) {
     let mut file = archive.by_index(file_index).unwrap();
     let outpath = file.sanitized_name();
 
@@ -46,7 +48,7 @@ fn unzip_archive(
             file_index,
             outpath.as_path().display()
         );
-        std::fs::create_dir_all(directory.join(&outpath)).unwrap();
+        fs::create_dir_all(directory.join(&outpath)).unwrap();
     } else {
         println!(
             "File {} extracted to \"{}\" ({} bytes)",
@@ -56,11 +58,11 @@ fn unzip_archive(
         );
         if let Some(p) = outpath.parent() {
             if !p.exists() {
-                std::fs::create_dir_all(directory.join(&p)).unwrap();
+                fs::create_dir_all(directory.join(&p)).unwrap();
             }
         }
-        let mut outfile = std::fs::File::create(directory.join(&outpath)).unwrap();
-        std::io::copy(&mut file, &mut outfile).unwrap();
+        let mut outfile = File::create(directory.join(&outpath)).unwrap();
+        io::copy(&mut file, &mut outfile).unwrap();
     }
 
     // Get and Set permissions
@@ -69,11 +71,8 @@ fn unzip_archive(
         use std::os::unix::fs::PermissionsExt;
 
         if let Some(mode) = file.unix_mode() {
-            std::fs::set_permissions(
-                directory.join(&outpath),
-                std::fs::Permissions::from_mode(mode),
-            )
-            .unwrap();
+            fs::set_permissions(directory.join(&outpath), fs::Permissions::from_mode(mode))
+                .unwrap();
         }
     }
 }
@@ -82,7 +81,7 @@ fn unzip_archive(
 mod tests {
     use super::*;
     use sha2::{digest::Digest, Sha256};
-    use std::{fs::File, io, io::Error, path::Path};
+    use std::{fs::File, io, path::Path};
 
     #[test]
     fn test_add() {
@@ -122,7 +121,7 @@ mod tests {
         std::fs::remove_dir_all("tests/zip_10MB").unwrap();
     }
 
-    fn hash_file(file: &str) -> Result<String, Error> {
+    fn hash_file(file: &str) -> Result<String, io::Error> {
         let mut file = File::open(file)?;
         let mut hasher = Sha256::new();
         let _ = io::copy(&mut file, &mut hasher);
