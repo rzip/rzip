@@ -10,3 +10,8 @@ zip = "0.5.3"
 
 [dev-dependencies]
 sha2 = "0.8.0"
+criterion = "0.3"
+
+[[bench]]
+name = "parsing"
+harness = false

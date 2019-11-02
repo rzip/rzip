@@ -97,6 +97,8 @@ mod tests {
         let hash = hash_file("tests/zip_10MB/file-sample_1MB.doc").unwrap();
         let correct_hash = "C560136E2A2B7036523F69EFDB4E9CDF369ABE167BA3A095E26D74E261774B20";
         assert_eq!(correct_hash, hash);
+
+        std::fs::remove_dir_all("tests/zip_10MB").unwrap();
     }
 
     fn hash_file(file: &str) -> Result<String, Error> {
