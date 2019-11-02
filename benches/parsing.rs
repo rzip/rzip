@@ -7,7 +7,9 @@ fn parse_zip_10_mb(path: &str) -> zip::read::ZipArchive<std::fs::File> {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("parsing zip_10MB", |b| b.iter(|| parse_zip_10_mb(black_box("tests/zip_10MB.zip"))));
+    c.bench_function("parsing zip_10MB", |b| {
+        b.iter(|| parse_zip_10_mb(black_box("tests/zip_10MB.zip")))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);
