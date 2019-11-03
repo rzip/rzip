@@ -8,6 +8,7 @@ edition = "2018"
 clap = { version = "2.33.0", features = ["yaml"] }
 zip = "0.5.3"
 ignore = "0.4"
+globset = "0.3"
 
 [dev-dependencies]
 sha2 = "0.8.0"

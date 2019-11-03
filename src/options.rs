@@ -1,6 +1,6 @@
 use clap::ArgMatches;
-use ignore::WalkBuilder;
-use std::ffi::OsString;
+// use ignore::WalkBuilder;
+// use globset::{Glob, GlobSet, GlobSetBuilder};
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -20,16 +20,14 @@ pub struct CLIOptions {
 
 impl CLIOptions {
     pub fn from_clap_matches(matches: &ArgMatches) -> CLIOptions {
-        let included_path_matches = get_paths_from_clap(
-            matches,
-            "files",
-            "You need to provide a valid path to a compressed file.",
-        );
-        let excluded_path_matches = get_paths_from_clap(
-            matches,
-            "files",
-            "You need to provide a valid path to a compressed file.",
-        );
+        let included_path_matches = get_paths_from_clap(matches, "files");
+
+        if included_path_matches.is_empty() {
+            panic!("You need to provide a valid path to a compressed file.");
+        }
+
+        let excluded_path_matches = get_paths_from_clap(matches, "exclude_files");
+
         let destination_folder = matches
             .value_of_os("extract_directory")
             .map(PathBuf::from)
@@ -54,7 +52,7 @@ impl CLIOptions {
         let output = if self.output_to_pipe {
             RZipOutput::StdOut
         } else {
-            RZipOutput::File
+            RZipOutput::File(self.destination_folder.clone())
         };
         let verbose = if self.quiet && self.very_quiet {
             RZipVerbose::None
@@ -98,7 +96,7 @@ impl CLIOptions {
         }
 
         RZipOptions {
-            files: build_archive_list(&self.excluded_path_matches, &self.excluded_path_matches),
+            files: build_archive_list(&self.included_path_matches, &self.excluded_path_matches),
             actions,
             output,
             verbose,
@@ -123,7 +121,7 @@ pub enum RZipVerbose {
 
 #[derive(Debug)]
 pub enum RZipOutput {
-    File,
+    File(PathBuf),
     StdOut,
 }
 
@@ -147,25 +145,35 @@ pub enum OverwriteMode {
     Ignore,
 }
 
-fn get_paths_from_clap(matches: &ArgMatches, name: &str, error: &str) -> Vec<PathBuf> {
+fn get_paths_from_clap(matches: &ArgMatches, name: &str) -> Vec<PathBuf> {
     matches
         .values_of_os(name)
         .map(|paths| paths.map(PathBuf::from).collect())
-        .expect(error)
+        .unwrap_or_else(|| vec![])
 }
-
-fn build_archive_list(included_paths: &[PathBuf], excluded_pats: &[PathBuf]) -> Vec<PathBuf> {
-    let mut builder = WalkBuilder::new(&included_paths[0]);
+//
+//  Inclusions and exclusions is harder than it may look.
+//  1) You need to identify what are globs and what are paths.
+//  2) From the paths, you need to indetify what are files and what are folders
+//  3) Ignore folders (I think?)
+//  4) From the globs, find the main folder from where the glob starts
+//      4.1) Example: './test/hola/**/*.zip' starts in './test/hola'
+//  5) Walk the directories.
+//  6) For each file, match the globs.
+//  7) For every positively matched one, try to match the exclusions.
+//
+//  Code commented until I find the best way to do it.
+fn build_archive_list(included_paths: &[PathBuf], _excluded_pats: &[PathBuf]) -> Vec<PathBuf> {
+    /*let mut builder = WalkBuilder::new(&included_paths[0]);
 
     for path in included_paths.iter().skip(1) {
         builder.add(&path);
     }
 
-    for path in excluded_pats.iter().skip(1) {
-        let mut glob = OsString::from("!");
-        glob.push(path);
-        builder.add(glob);
-    }
+    println!("{:?}", included_paths);
+    println!("{:?}", excluded_pats);
+
+    let exclusions = build_glob(excluded_pats);
 
     builder.standard_filters(false);
 
@@ -174,16 +182,31 @@ fn build_archive_list(included_paths: &[PathBuf], excluded_pats: &[PathBuf]) -> 
     let mut paths: Vec<PathBuf> = vec![];
 
     for entry in walker {
+        print!("{:?}", entry);
         match entry {
             Ok(ref entry) if entry.error().is_none() => {
                 paths.push(entry.path().to_path_buf());
             }
             _ => {}
         }
-    }
+    }*/
 
-    paths
+    included_paths.to_vec()
 }
 
-// Using ignore crate as it is easier to use and seems to be the one
-// that will be maintained in the future: https://github.com/rust-lang-nursery/glob/issues/59
+/*fn build_glob(globs: &[PathBuf]) -> GlobSet{
+    let mut builder = GlobSetBuilder::new();
+
+    for glob in globs {
+        // Posible error in non utf8 filesystems
+        let globstr = glob.to_str();
+        if globstr.is_none() { continue; }
+
+        let glob = Glob::new(globstr.unwrap());
+        if glob.is_err() { continue; }
+
+        builder.add(glob.unwrap());
+    }
+
+    builder.build().unwrap()
+}*/
