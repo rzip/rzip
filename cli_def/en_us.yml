@@ -6,6 +6,8 @@ args:
     - files:
         required: true
         index: 1
+        min_values: 1
+        multiple: true
         help: File path to decompress. It supports RegExp
         long_help: 'Path of the ZIP archive(s). If the file specification is a
         wildcard, each matching file is processed in an order determined by
@@ -44,7 +46,7 @@ args:
         expanded or modified by the operating system.'
     - exclude_files:
         short: x
-        value_name: EXLUDE_FILES
+        value_name: EXCLUDE_FILES
         min_values: 1
         multiple: true
         help: File/s path to ignore. It supports RegExp.

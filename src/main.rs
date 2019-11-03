@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate clap;
 
+mod options;
+use crate::options::CLIOptions;
 use clap::App;
 use std::{fs, fs::File, io, path::Path};
 
@@ -8,17 +10,14 @@ fn main() {
     let yaml = load_yaml!("../cli_def/en_us.yml");
     let matches = App::from_yaml(yaml).get_matches();
 
-    let file = matches
-        .value_of("files")
-        .expect("You need to provide a valid path to a compressed file.");
+    let raw_options = CLIOptions::from_clap_matches(&matches);
 
-    let destination = matches.value_of("extract_directory").unwrap_or("./");
+    let options = raw_options.process_options();
 
-    let file_name = Path::new(&file);
-    let destination_name = Path::new(&destination);
-    let file = File::open(&file_name).unwrap();
-
-    unzip_file(file, destination_name);
+    for filename in options.files {
+        let file = File::open(filename).unwrap();
+        unzip_file(file, &raw_options.destination_folder);
+    }
 }
 
 fn unzip_file(file: File, directory: &Path) {
