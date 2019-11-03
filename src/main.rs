@@ -16,7 +16,10 @@ fn main() {
 
     for filename in options.files {
         let file = File::open(filename).unwrap();
-        unzip_file(file, &raw_options.destination_folder);
+        unzip_file(
+            file,
+            &std::path::PathBuf::from(&raw_options.destination_folder),
+        );
     }
 }
 

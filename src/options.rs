@@ -1,13 +1,14 @@
 use clap::ArgMatches;
 // use ignore::WalkBuilder;
 // use globset::{Glob, GlobSet, GlobSetBuilder};
-use std::path::PathBuf;
+//use std::path::PathBuf;
+use std::ffi::OsString;
 
 #[derive(Debug)]
 pub struct CLIOptions {
-    pub included_path_matches: Vec<PathBuf>,
-    pub excluded_path_matches: Vec<PathBuf>,
-    pub destination_folder: PathBuf,
+    pub included_path_matches: Vec<OsString>,
+    pub excluded_path_matches: Vec<OsString>,
+    pub destination_folder: OsString,
     pub list_only_short: bool,
     pub output_to_pipe: bool,
     pub test_files_only: bool,
@@ -28,10 +29,10 @@ impl CLIOptions {
 
         let excluded_path_matches = get_paths_from_clap(matches, "exclude_files");
 
-        let destination_folder = matches
+        let destination_folder: OsString = matches
             .value_of_os("extract_directory")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("./"));
+            .map(OsString::from)
+            .unwrap_or_else(|| OsString::from("./"));
 
         CLIOptions {
             included_path_matches,
@@ -106,7 +107,7 @@ impl CLIOptions {
 
 #[derive(Debug)]
 pub struct RZipOptions {
-    pub files: Vec<PathBuf>,
+    pub files: Vec<OsString>, //TODO: Change to PathBuf
     pub actions: Vec<RZipActions>,
     pub output: RZipOutput,
     pub verbose: RZipVerbose,
@@ -121,7 +122,7 @@ pub enum RZipVerbose {
 
 #[derive(Debug)]
 pub enum RZipOutput {
-    File(PathBuf),
+    File(OsString), //TODO: Change to PathBuf
     StdOut,
 }
 
@@ -145,10 +146,10 @@ pub enum OverwriteMode {
     Ignore,
 }
 
-fn get_paths_from_clap(matches: &ArgMatches, name: &str) -> Vec<PathBuf> {
+fn get_paths_from_clap(matches: &ArgMatches, name: &str) -> Vec<OsString> {
     matches
         .values_of_os(name)
-        .map(|paths| paths.map(PathBuf::from).collect())
+        .map(|paths| paths.map(OsString::from).collect())
         .unwrap_or_else(|| vec![])
 }
 //
@@ -163,7 +164,9 @@ fn get_paths_from_clap(matches: &ArgMatches, name: &str) -> Vec<PathBuf> {
 //  7) For every positively matched one, try to match the exclusions.
 //
 //  Code commented until I find the best way to do it.
-fn build_archive_list(included_paths: &[PathBuf], _excluded_pats: &[PathBuf]) -> Vec<PathBuf> {
+//
+//  Warning: The final return type for this function should be Vec<PathBuf>
+fn build_archive_list(included_paths: &[OsString], _excluded_pats: &[OsString]) -> Vec<OsString> {
     /*let mut builder = WalkBuilder::new(&included_paths[0]);
 
     for path in included_paths.iter().skip(1) {
