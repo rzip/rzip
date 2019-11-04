@@ -55,15 +55,14 @@ impl CLIOptions {
         } else {
             RZipOutput::File(self.destination_folder.clone())
         };
-        let verbose = if self.quiet && self.very_quiet {
-            RZipVerbose::None
-        } else if self.quiet {
-            RZipVerbose::Quiet
-        } else {
-            RZipVerbose::Normal
+
+        let verbose = match (self.quiet, self.very_quiet) {
+            (true, true) => RZipVerbose::None,
+            (true, false) => RZipVerbose::Quiet,
+            (false, _) => RZipVerbose::Normal,
         };
 
-        let mut actions: Vec<RZipActions> = vec![];
+        let mut actions = vec![];
 
         let mut extract = true;
 
@@ -84,12 +83,10 @@ impl CLIOptions {
 
         if extract {
             let extract_option = ExtractionOptions {
-                overwrite: if self.no_overwrite {
-                    OverwriteMode::Ignore
-                } else if self.overwrite_without_asking {
-                    OverwriteMode::Overwrite
-                } else {
-                    OverwriteMode::Ask
+                overwrite: match (self.no_overwrite, self.overwrite_without_asking) {
+                    (true, _) => OverwriteMode::Ignore,
+                    (false, true) => OverwriteMode::Overwrite,
+                    (false, false) => OverwriteMode::Ask,
                 },
             };
 
@@ -150,7 +147,7 @@ fn get_paths_from_clap(matches: &ArgMatches, name: &str) -> Vec<OsString> {
     matches
         .values_of_os(name)
         .map(|paths| paths.map(OsString::from).collect())
-        .unwrap_or_else(|| vec![])
+        .unwrap_or_default()
 }
 //
 //  Inclusions and exclusions is harder than it may look.
