@@ -4,7 +4,12 @@ extern crate clap;
 mod options;
 use crate::options::CLIOptions;
 use clap::App;
-use std::{fs, fs::File, io, path::Path};
+use std::{
+    fs,
+    fs::File,
+    io,
+    path::{Path, PathBuf},
+};
 
 fn main() {
     let yaml = load_yaml!("../cli_def/en_us.yml");
@@ -16,67 +21,71 @@ fn main() {
 
     for filename in options.files {
         let file = File::open(filename).unwrap();
-        unzip_file(
-            file,
-            &std::path::PathBuf::from(&raw_options.destination_folder),
-        );
+        unzip_file(file, &PathBuf::from(&raw_options.destination_folder));
     }
 }
 
 fn unzip_file(file: File, directory: &Path) {
     let mut archive = zip::ZipArchive::new(file).unwrap();
 
-    let files_indexes = 0..archive.len();
-
-    files_indexes
-        .map(|file_index| unzip_archive(file_index, &mut archive, directory))
-        .for_each(drop);
+    for file_index in 0..archive.len() {
+        let file = archive.by_index(file_index).unwrap();
+        unzip_archive(file, directory)
+    }
 }
 
-fn unzip_archive(file_index: usize, archive: &mut zip::ZipArchive<File>, directory: &Path) {
-    let mut file = archive.by_index(file_index).unwrap();
+fn unzip_archive(mut file: zip::read::ZipFile, directory: &Path) {
     let outpath = file.sanitized_name();
+    let name = file.name().to_owned(); // We copy the name into heap in order to avoid borrowing file as we use it later.
 
-    {
-        let comment = file.comment();
-        if !comment.is_empty() {
-            println!("File {} comment: {}", file_index, comment);
-        }
+    let comment = file.comment();
+    if !comment.is_empty() {
+        println!("File {} comment: {}", name, comment);
     }
 
-    if (&*file.name()).ends_with('/') {
-        println!(
-            "File {} extracted to \"{}\"",
-            file_index,
-            outpath.as_path().display()
-        );
-        fs::create_dir_all(directory.join(&outpath)).unwrap();
+    if file.name().ends_with('/') {
+        create_folder(&name, &outpath, directory);
     } else {
-        println!(
-            "File {} extracted to \"{}\" ({} bytes)",
-            file_index,
-            outpath.as_path().display(),
-            file.size()
-        );
-        if let Some(p) = outpath.parent() {
-            if !p.exists() {
-                fs::create_dir_all(directory.join(&p)).unwrap();
-            }
-        }
-        let mut outfile = File::create(directory.join(&outpath)).unwrap();
-        io::copy(&mut file, &mut outfile).unwrap();
+        create_file(&name, &outpath, directory, &mut file)
     }
 
     // Get and Set permissions
     #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
+    set_unix_permissions(&outpath, directory, &file);
+}
 
-        if let Some(mode) = file.unix_mode() {
-            fs::set_permissions(directory.join(&outpath), fs::Permissions::from_mode(mode))
-                .unwrap();
+#[cfg(unix)]
+fn set_unix_permissions(outpath: &PathBuf, directory: &Path, file: &zip::read::ZipFile<'_>) {
+    use std::os::unix::fs::PermissionsExt;
+
+    if let Some(mode) = file.unix_mode() {
+        fs::set_permissions(directory.join(&outpath), fs::Permissions::from_mode(mode)).unwrap();
+    }
+}
+
+fn create_file(name: &str, outpath: &PathBuf, directory: &Path, file: &mut zip::read::ZipFile<'_>) {
+    println!(
+        "File {} extracted to \"{}\" ({} bytes)",
+        name,
+        outpath.as_path().display(),
+        file.size()
+    );
+    if let Some(p) = outpath.parent() {
+        if !p.exists() {
+            fs::create_dir_all(directory.join(&p)).unwrap();
         }
     }
+    let mut outfile = File::create(directory.join(&outpath)).unwrap();
+    io::copy(&mut *file, &mut outfile).unwrap();
+}
+
+fn create_folder(name: &str, outpath: &PathBuf, directory: &Path) {
+    println!(
+        "File {} extracted to \"{}\"",
+        name,
+        outpath.as_path().display()
+    );
+    fs::create_dir_all(directory.join(&outpath)).unwrap();
 }
 
 #[cfg(test)]
