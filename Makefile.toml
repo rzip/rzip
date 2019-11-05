@@ -1,0 +1,9 @@
+[tasks.build]
+command = "cargo"
+args = ["build"]
+dependencies = ["format", "clippy"]
+
+[tasks.test]
+command = "cargo"
+args = ["test"]
+dependencies = ["build"]

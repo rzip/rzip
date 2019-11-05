@@ -1,7 +1,23 @@
 [package]
 name = "rzip"
 version = "0.1.0"
-authors = []
+authors = ["David Bonet <dbmontes@gmail.com> - https://github.com/davidbm/", "Lachezar Lechev <> - https://github.com/elpiel"]
 edition = "2018"
 
 [dependencies]
+clap = { version = "2.33.0", features = ["yaml"] }
+zip = "0.5.3"
+ignore = "0.4"
+globset = "0.3"
+
+[dev-dependencies]
+sha2 = "0.8.0"
+criterion = "0.3"
+
+[[bench]]
+name = "parsing"
+harness = false
+
+[[bench]]
+name = "clap_arguments"
+harness = false
