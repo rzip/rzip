@@ -1,7 +1,7 @@
 use crate::options::CLIOptions;
-use clap::{App, load_yaml};
-use std::{fs::File, path::PathBuf};
+use clap::{load_yaml, App};
 use rzip::unzip_archive;
+use std::{fs::File, path::PathBuf};
 mod options;
 
 #[tokio::main]

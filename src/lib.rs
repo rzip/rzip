@@ -1,5 +1,9 @@
-use std::{fs::{File}, io, path::{Path, PathBuf}};
-use async_std::{fs::{create_dir_all, set_permissions, Permissions}};
+use async_std::fs::{create_dir_all, set_permissions, Permissions};
+use std::{
+    fs::File,
+    io,
+    path::{Path, PathBuf},
+};
 use zip::read::ZipFile;
 
 pub async fn unzip_archive(file: File, directory: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -9,14 +13,17 @@ pub async fn unzip_archive(file: File, directory: &Path) -> Result<(), Box<dyn s
     for file_index in 0..archive.len() {
         match archive.by_index(file_index) {
             Ok(file) => files.push(unzip_file(file, directory).await),
-            Err(error) => files.push(Err(Box::new(error)))
+            Err(error) => files.push(Err(Box::new(error))),
         };
     }
 
     Ok(())
 }
 
-async fn unzip_file<'a>(mut file: ZipFile<'a>, directory: &Path) -> Result<(), Box<dyn std::error::Error>> {
+async fn unzip_file(
+    mut file: ZipFile<'_>,
+    directory: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     let outpath = file.sanitized_name();
     // We copy the name into heap in order to avoid borrowing file as we use it later.
     let name = file.name().to_owned();
@@ -45,7 +52,9 @@ async fn set_unix_permissions(outpath: &PathBuf, directory: &Path, file: &ZipFil
     use std::os::unix::fs::PermissionsExt;
 
     if let Some(mode) = file.unix_mode() {
-        set_permissions(directory.join(&outpath), Permissions::from_mode(mode)).await.unwrap();
+        set_permissions(directory.join(&outpath), Permissions::from_mode(mode))
+            .await
+            .unwrap();
     }
 }
 
@@ -63,7 +72,7 @@ async fn create_file(name: &str, outpath: &PathBuf, directory: &Path, file: &mut
     }
 
     let mut outfile = File::create(directory.join(&outpath)).unwrap();
-    io::copy(file.into(), &mut outfile).unwrap();
+    io::copy(file, &mut outfile).unwrap();
 }
 
 async fn create_folder(name: &str, outpath: &PathBuf, directory: &Path) {
