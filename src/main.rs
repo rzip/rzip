@@ -1,12 +1,8 @@
-#[macro_use]
-extern crate clap;
-
-mod lib;
-mod options;
-use crate::lib::unzip_archive;
 use crate::options::CLIOptions;
-use clap::App;
+use clap::{App, load_yaml};
 use std::{fs::File, path::PathBuf};
+use rzip::unzip_archive;
+mod options;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
