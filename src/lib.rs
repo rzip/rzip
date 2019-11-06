@@ -40,9 +40,8 @@ async fn unzip_file(
     }
 
     // Get and Set permissions
-    if cfg!(unix) {
-        set_unix_permissions(&outpath, directory, &file).await;
-    }
+    #[cfg(unix)]
+    set_unix_permissions(&outpath, directory, &file).await;
 
     Ok(())
 }
