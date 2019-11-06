@@ -1,85 +1,94 @@
-use std::{
-    fs,
-    fs::File,
-    io,
-    path::{Path, PathBuf},
-};
+use std::{fs::{create_dir_all, File, set_permissions, Permissions}, io, path::{Path, PathBuf}};
 
-pub fn unzip_file(file: File, directory: &Path) {
-    let mut archive = zip::ZipArchive::new(file).unwrap();
+use zip::read::ZipFile;
+
+pub async fn unzip_archive(file: File, directory: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let mut archive = zip::ZipArchive::new(file)?;
+    let mut files = vec![];
 
     for file_index in 0..archive.len() {
-        let file = archive.by_index(file_index).unwrap();
-        unzip_archive(file, directory)
+        match archive.by_index(file_index) {
+            Ok(file) => files.push(unzip_file(file, directory).await),
+            Err(error) => files.push(Err(Box::new(error)))
+        };
     }
+
+    Ok(())
 }
 
-fn unzip_archive(mut file: zip::read::ZipFile, directory: &Path) {
+async fn unzip_file<'a>(mut file: ZipFile<'a>, directory: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let outpath = file.sanitized_name();
-    let name = file.name().to_owned(); // We copy the name into heap in order to avoid borrowing file as we use it later.
+    // We copy the name into heap in order to avoid borrowing file as we use it later.
+    let name = file.name().to_owned();
 
     let comment = file.comment();
     if !comment.is_empty() {
         println!("File {} comment: {}", name, comment);
     }
 
-    if file.name().ends_with('/') {
-        create_folder(&name, &outpath, directory);
+    if file.is_dir() {
+        create_folder(&name, &outpath, directory).await;
     } else {
-        create_file(&name, &outpath, directory, &mut file)
+        create_file(&name, &outpath, directory, &mut file).await;
     }
 
     // Get and Set permissions
     #[cfg(unix)]
-    set_unix_permissions(&outpath, directory, &file);
+        set_unix_permissions(&outpath, directory, &file);
+
+    Ok(())
 }
 
 #[cfg(unix)]
-fn set_unix_permissions(outpath: &PathBuf, directory: &Path, file: &zip::read::ZipFile<'_>) {
+fn set_unix_permissions(outpath: &PathBuf, directory: &Path, file: &ZipFile<'_>) {
     use std::os::unix::fs::PermissionsExt;
 
     if let Some(mode) = file.unix_mode() {
-        fs::set_permissions(directory.join(&outpath), fs::Permissions::from_mode(mode)).unwrap();
+        set_permissions(directory.join(&outpath), Permissions::from_mode(mode)).unwrap();
     }
 }
 
-fn create_file(name: &str, outpath: &PathBuf, directory: &Path, file: &mut zip::read::ZipFile<'_>) {
+async fn create_file(name: &str, outpath: &PathBuf, directory: &Path, file: &mut ZipFile<'_>) {
     println!(
         "File {} extracted to \"{}\" ({} bytes)",
         name,
         outpath.as_path().display(),
         file.size()
     );
-    if let Some(p) = outpath.parent() {
-        if !p.exists() {
-            fs::create_dir_all(directory.join(&p)).unwrap();
-        }
+
+    match outpath.parent() {
+        Some(p) if !p.exists() => create_dir_all(directory.join(&p)).unwrap(),
+        _ => {}
     }
+
     let mut outfile = File::create(directory.join(&outpath)).unwrap();
-    io::copy(&mut *file, &mut outfile).unwrap();
+    io::copy(file, &mut outfile).unwrap();
 }
 
-fn create_folder(name: &str, outpath: &PathBuf, directory: &Path) {
+async fn create_folder(name: &str, outpath: &PathBuf, directory: &Path) {
     println!(
         "File {} extracted to \"{}\"",
         name,
         outpath.as_path().display()
     );
-    fs::create_dir_all(directory.join(&outpath)).unwrap();
+    create_dir_all(directory.join(&outpath)).unwrap();
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use sha2::{digest::Digest, Sha256};
-    use std::{fs::File, io, path::Path};
+    use std::{io, path::Path};
+    use std::fs::{File, remove_dir_all};
 
-    #[test]
-    fn test_add() {
-        unzip_file(
+    use sha2::{digest::Digest, Sha256};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_add() {
+        let _ = unzip_archive(
             File::open("tests/zip_10MB.zip").unwrap(),
             Path::new("tests"),
-        );
+        ).await;
 
         let hash = hash_file("tests/zip_10MB/file-example_PDF_1MB.pdf").unwrap();
         let correct_hash = "5E4D40FCD8B22453A5DA2D32533B128F2565F3FC7A4D1647A93C86CDBB4BE37A";
@@ -109,7 +118,7 @@ mod tests {
         let correct_hash = "C560136E2A2B7036523F69EFDB4E9CDF369ABE167BA3A095E26D74E261774B20";
         assert_eq!(correct_hash, hash);
 
-        std::fs::remove_dir_all("tests/zip_10MB").unwrap();
+        remove_dir_all("tests/zip_10MB").unwrap();
     }
 
     fn hash_file(file: &str) -> Result<String, io::Error> {
