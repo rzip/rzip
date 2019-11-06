@@ -8,14 +8,15 @@ use zip::read::ZipFile;
 
 pub async fn unzip_archive(file: File, directory: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let mut archive = zip::ZipArchive::new(file)?;
-    let mut files = vec![];
+    let mut results = vec![];
 
     for file_index in 0..archive.len() {
         match archive.by_index(file_index) {
-            Ok(file) => files.push(unzip_file(file, directory).await),
-            Err(error) => files.push(Err(Box::new(error))),
+            Ok(file) => results.push(unzip_file(file, directory).await),
+            Err(error) => results.push(Err(Box::new(error))),
         };
     }
+    // @TODO: Do something with the results https://github.com/rzip/rzip/issues/8
 
     Ok(())
 }
