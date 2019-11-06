@@ -8,7 +8,7 @@ use rzip::unzip_archive;
 #[tokio::test]
 async fn test_unzip() {
     let _ = unzip_archive(
-        File::open("tests/dummy_files/zip_10MB.zip").unwrap(),
+        File::open("tests/dummy_files/zip_10MB.zip").expect("The dummy zip file was not found"),
         Path::new("tests/temp"),
     )
     .await;
@@ -45,11 +45,13 @@ async fn test_unzip() {
     ];
 
     for (file_name, expected_hash) in files {
-        let hash = hash_file(file_name).await.expect("whooops");
+        let hash = hash_file(file_name)
+            .await
+            .expect(&format!("Couldn't hash file {}", file_name));
         assert_eq!(expected_hash, hash);
     }
 
-    remove_dir_all("tests/temp/zip_10MB").expect("darn");
+    remove_dir_all("tests/temp/zip_10MB").expect("The unzipped directory couldn't be deleted");
 }
 
 async fn hash_file(file: &str) -> Result<String, io::Error> {
