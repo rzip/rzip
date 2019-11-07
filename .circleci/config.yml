@@ -7,6 +7,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Set nightly to be defalt toolchain
+          command: rustup default nightly
+      - run:
           name: Version information
           command: rustc --version; cargo --version; rustup --version
       - run:
