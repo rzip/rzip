@@ -4,7 +4,7 @@ CARGO_MAKE_CLIPPY_ARGS = "--all-features -- -D warnings"
 [tasks.dev-test-flow]
 dependencies = [
     "format-flow",
-	# additionally run clippy locally
+    # additionally run clippy locally
     "clippy",
     "pre-build",
     "build",
