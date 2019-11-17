@@ -10,6 +10,9 @@ jobs:
           name: Set stable to be defalt toolchain
           command: rustup default stable
       - run:
+          name: Install Cargo-make
+          command: which cargo-make || cargo install cargo-make
+      - run:
           name: Version information
           command: rustc --version; cargo --version; rustup --version
       - run:
@@ -17,17 +20,18 @@ jobs:
           command: cargo generate-lockfile
       - restore_cache:
           keys:
-            - v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
       - run:
-          name: Build all targets
-          command: cargo build --all --all-targets
+          name: Run CI-flow
+          command: cargo make ci-flow
+          environment:
+            CARGO_MAKE_RUN_CHECK_FORMAT: true
+            CARGO_MAKE_RUN_CLIPPY: true
+      # See: https://levans.fr/rust_travis_cache.html
+      - run:
+          name: Remove unnecessary caching file
+          command: rm -rf /usr/local/cargo/registry
       - save_cache:
           paths:
-            - /usr/local/cargo/registry
-            - target/debug/.fingerprint
-            - target/debug/build
-            - target/debug/deps
-          key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
-      - run:
-          name: Run all tests
-          command: cargo test --all
+            - /usr/local/cargo/
+          key: v1-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
