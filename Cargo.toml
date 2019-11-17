@@ -1,8 +1,13 @@
 [package]
 name = "rzip"
 version = "0.1.0"
-authors = ["David Bonet <dbmontes@gmail.com> - https://github.com/davidbm/", "Lachezar Lechev <> - https://github.com/elpiel"]
+authors = ["David Bonet <dbmontes@gmail.com>", "Lachezar Lechev <elpiel93@gmail.com>"]
 edition = "2018"
+readme = "README.md"
+license = "Apache-2.0"
+
+[badges]
+circle-ci = { repository = "rzip/rzip" }
 
 [dependencies]
 clap = { version = "2.33.0", features = ["yaml"] }

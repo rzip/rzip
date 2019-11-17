@@ -1,9 +1,14 @@
-[tasks.build]
-command = "cargo"
-args = ["build"]
-dependencies = ["format", "clippy"]
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = "true"
+CARGO_MAKE_CLIPPY_ARGS = "--all-features -- -D warnings"
 
-[tasks.test]
-command = "cargo"
-args = ["test"]
-dependencies = ["build"]
+[tasks.dev-test-flow]
+dependencies = [
+    "format-flow",
+	# additionally run clippy locally
+    "clippy",
+    "pre-build",
+    "build",
+    "post-build",
+    "test-flow",
+]
