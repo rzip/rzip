@@ -10,7 +10,6 @@ zip = "0.5.3"
 ignore = "0.4"
 # globset = "0.3"
 async-std = "0.99.11"
-tokio = "0.2.0-alpha.6"
 [dev-dependencies]
 sha2 = "0.8.0"
 criterion = "0.3"
