@@ -48,15 +48,15 @@ fn random_name() -> String {
     let mut rng = thread_rng();
     iter::repeat(())
             .map(|()| rng.sample(Alphanumeric))
-            .take(7)
+            .take(25)
             .collect::<String>()
 }
 
 fn delete_temp_dir(folder_name: &str){
-    let path = PathBuf::from(format!("./temp/{}", folder_name));
+    let path = PathBuf::from(format!("tests/temp/{}", folder_name));
     let result = remove_dir_all(&path);
     
-    println!("Deleting files... {:?} - {:?}", path, result);
+    println!("Cleaning up tests... {:?} - {:?}", path, result);
 
     match result {
         Err(ref e) if e.kind() == NotFound => {},
