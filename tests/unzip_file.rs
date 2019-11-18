@@ -12,7 +12,7 @@ use test_utils::build_basic_runner;
 fn test_unzip() {
     let runner = build_basic_runner();
 
-    runner.run(move |folder_name| Box::new(async move {
+    runner.run(|folder_name| Box::new(async move {
         let _ = unzip_archive(
             File::open("tests/dummy_files/zip_10MB.zip").expect("The dummy zip file was not found"),
             Path::new(&format!("tests/temp/{}", folder_name)),
