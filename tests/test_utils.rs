@@ -3,6 +3,9 @@ use std::path::PathBuf;
 use std::io::ErrorKind::NotFound;
 
 pub mod tests {
+    use std::future::Future;
+    use async_std::task;
+
     pub struct TestCleaner<S = Box<dyn Fn(&str) -> ()>, T = Box<dyn Fn(&str) -> ()>>
         where S: Fn(&str) -> (),
               T: Fn(&str) -> ()
@@ -23,14 +26,16 @@ pub mod tests {
         }
 
         pub fn run<R>(&self, test: R)  
-            where R: FnOnce(&str) -> () + std::panic::UnwindSafe
+            where R: FnOnce(String) -> Box<dyn Future<Output = ()>> + Send + std::panic::UnwindSafe
         {
             let folder_name = super::random_name();
 
             (self.setup)(folder_name.as_ref());
 
             let result = std::panic::catch_unwind(|| {
-                test(folder_name.as_ref())
+                task::block_on(async {
+                    std::pin::Pin::from(test(folder_name.clone())).await;
+                });
             });
 
             (self.teardown)(folder_name.as_ref());
