@@ -84,6 +84,5 @@ async fn hash_file(file: &str) -> Result<String, io::Error> {
     let mut file = File::open(file)?;
     let mut hasher = Sha256::new();
     io::copy(&mut file, &mut hasher).unwrap();
-    drop(file);
     Ok(format!("{:X}", hasher.result()))
 }

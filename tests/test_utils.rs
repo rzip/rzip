@@ -77,7 +77,7 @@ pub fn build_basic_runner() -> tests::TestCleaner {
     tests::TestCleaner::new(
         |folder_name| {
             delete_temp_dir(folder_name);
-            create_dir_all(format!("./temp/{}", folder_name)).unwrap();
+            create_dir_all(format!("tests/temp/{}", folder_name)).unwrap();
         },
         |folder_name| {
             delete_temp_dir(folder_name);
