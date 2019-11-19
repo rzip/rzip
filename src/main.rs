@@ -1,7 +1,7 @@
 use crate::options::CLIOptions;
+use async_std::task;
 use clap::{load_yaml, App};
 use rzip::unzip_archive;
-use async_std::{task};
 use std::{fs::File, path::PathBuf};
 mod options;
 
