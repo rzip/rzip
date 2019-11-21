@@ -1,32 +1,49 @@
 use async_std::fs::{create_dir_all, set_permissions, Permissions};
 use std::{
+    error::Error,
     fs::File,
     io,
     path::{Path, PathBuf},
 };
 use zip::read::ZipFile;
+use zip::result::ZipError;
 
-pub async fn unzip_archive(file: File, directory: &Path) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Debug)]
+pub struct FileUnzipResult {
+    pub name: Option<String>,
+    pub result: Result<(), UnzipError>,
+}
+
+#[derive(Debug)]
+pub enum UnzipError {
+    OtherError,
+    ZipError(ZipError),
+}
+
+pub async fn unzip_archive(
+    file: File,
+    directory: &Path,
+) -> Result<Vec<FileUnzipResult>, Box<dyn Error>> {
     let mut archive = zip::ZipArchive::new(file)?;
     let mut results = vec![];
 
     for file_index in 0..archive.len() {
         match archive.by_index(file_index) {
             Ok(file) => results.push(unzip_file(file, directory).await),
-            Err(error) => results.push(Err(Box::new(error))),
+            Err(error) => {
+                results.push(FileUnzipResult {
+                    name: None,
+                    result: Err(UnzipError::ZipError(error)),
+                });
+            }
         };
     }
-    // @TODO: Do something with the results https://github.com/rzip/rzip/issues/8
 
-    Ok(())
+    Ok(results)
 }
-
-async fn unzip_file(
-    mut file: ZipFile<'_>,
-    directory: &Path,
-) -> Result<(), Box<dyn std::error::Error>> {
+// This function stills doesn't return any error, but it will once we remove the .unwrap
+async fn unzip_file(mut file: ZipFile<'_>, directory: &Path) -> FileUnzipResult {
     let outpath = file.sanitized_name();
-    // We copy the name into heap in order to avoid borrowing file as we use it later.
     let name = file.name().to_owned();
 
     let comment = file.comment();
@@ -44,7 +61,11 @@ async fn unzip_file(
     #[cfg(unix)]
     set_unix_permissions(&outpath, directory, &file).await;
 
-    Ok(())
+    FileUnzipResult {
+        name: Some(file.name().to_owned()),
+        //Still empty as the unzip_file function is full of unwrap and doesn't return errors
+        result: Err(UnzipError::OtherError),
+    }
 }
 
 #[cfg(unix)]
